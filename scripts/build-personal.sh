@@ -16,9 +16,19 @@ if [[ -e "$output" ]]; then
 fi
 mkdir -p "$(dirname "$output")"
 ditto "$template" "$output"
-swiftc -O -D PERSONAL_BUILD -F "$template/Contents/Frameworks" -framework Sparkle \
-    -Xlinker -rpath -Xlinker '@executable_path/../Frameworks' \
-    "$root/native-host/Sources/tab-switcher/main.swift" -o "$output/Contents/MacOS/tab-switcher"
+source="$root/native-host/Sources/tab-switcher/main.swift"
+binary="$output/Contents/MacOS/tab-switcher"
+if [[ "${TAB_SWITCHER_UNIVERSAL:-0}" == 1 ]]; then
+    for arch in arm64 x86_64; do
+        swiftc -O -D PERSONAL_BUILD -target "$arch-apple-macos14.0" -F "$template/Contents/Frameworks" -framework Sparkle \
+            -Xlinker -rpath -Xlinker '@executable_path/../Frameworks' "$source" -o "$binary.$arch"
+    done
+    lipo -create "$binary.arm64" "$binary.x86_64" -output "$binary"
+    rm "$binary.arm64" "$binary.x86_64"
+else
+    swiftc -O -D PERSONAL_BUILD -F "$template/Contents/Frameworks" -framework Sparkle \
+        -Xlinker -rpath -Xlinker '@executable_path/../Frameworks' "$source" -o "$binary"
+fi
 plist="$output/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier com.ruslanrmv.tabswitcher' "$plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleName Tab Switcher Personal' "$plist"

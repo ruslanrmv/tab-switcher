@@ -294,7 +294,9 @@ class BrowserConfigManager: ObservableObject {
     init() {
         loadConfig()
         loadShortcuts()
+        #if !PERSONAL_BUILD
         fetchRemoteBrowserList()
+        #endif
     }
 
     func loadShortcuts() {
@@ -1100,8 +1102,12 @@ struct BrowserRowView: View {
 
     /// Whether this browser has a legacy (non-CWS) manual extension ID
     private var hasLegacyExtensionId: Bool {
+        #if PERSONAL_BUILD
+        return false
+        #else
         guard let extId = currentBrowser?.extensionId, !extId.isEmpty else { return false }
         return extId != CWS_EXTENSION_ID
+        #endif
     }
 
     var body: some View {
