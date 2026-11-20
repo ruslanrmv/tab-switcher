@@ -2900,6 +2900,11 @@ func main() {
     debugLog("Tab Switcher Native Host starting (PID \(myProcessId))...")
     
     let directLaunch = isLaunchedDirectly()
+    #if PERSONAL_BUILD
+    let installerPermissionMode = directLaunch && CommandLine.arguments.contains("--installer-permission")
+    #else
+    let installerPermissionMode = false
+    #endif
     debugLog("Launched directly: \(directLaunch)")
     
     // For direct launches, check if another DIRECTLY-LAUNCHED instance is already running
@@ -2966,7 +2971,10 @@ func main() {
                 guard isEventTapLeader, AXIsProcessTrusted() else { return }
                 if setupEventTap() {
                     debugLog("Event tap setup complete after accessibility permission")
-                    if directLaunch { writeAccessibilityReady() }
+                    if directLaunch {
+                        writeAccessibilityReady()
+                        if installerPermissionMode { NSApp.terminate(nil) }
+                    }
                     timer.invalidate()
                 }
             }
@@ -2974,7 +2982,10 @@ func main() {
         } else {
             debugLog("Event tap setup complete (we are the leader)")
             #if PERSONAL_BUILD
-            if directLaunch { writeAccessibilityReady() }
+            if directLaunch {
+                writeAccessibilityReady()
+                if installerPermissionMode { DispatchQueue.main.async { NSApp.terminate(nil) } }
+            }
             #endif
         }
     } else {
@@ -3004,10 +3015,10 @@ func main() {
     // Setup and run the application
     let app = NSApplication.shared
     let delegate = AppDelegate()
-    delegate.launchedDirectly = directLaunch
+    delegate.launchedDirectly = directLaunch && !installerPermissionMode
     app.delegate = delegate
     
-    if directLaunch {
+    if directLaunch && !installerPermissionMode {
         // Show in dock when launched directly
         app.setActivationPolicy(.regular)
     } else {

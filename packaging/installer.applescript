@@ -8,7 +8,7 @@ on run
 		if resultText is not "OK" then error resultText
 		set readyFile to (POSIX path of (path to library folder from user domain)) & "Application Support/TabSwitcher/accessibility.ready"
 		do shell script "/bin/rm -f " & quoted form of readyFile
-		do shell script "/usr/bin/open " & quoted form of appPath
+		do shell script "/usr/bin/open -n -g " & quoted form of appPath & " --args --installer-permission"
 		set accessGranted to false
 		repeat 300 times
 			try
