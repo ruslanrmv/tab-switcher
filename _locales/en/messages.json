@@ -1,9 +1,26 @@
 {
-  "renameTab": { "message": "Rename tab" },
-  "renameTabMenu": { "message": "Rename tab…" },
-  "tabName": { "message": "Tab name" },
-  "saveTabName": { "message": "Save" },
-  "resetTabName": { "message": "Restore original" },
-  "tabChanged": { "message": "The tab was closed or opened another page. Open the menu again to rename it." },
-  "tabRenameUnavailable": { "message": "Chrome does not allow Tab Switcher to rename this page." }
+  "renameTab": {
+    "message": "Rename tab"
+  },
+  "renameTabMenu": {
+    "message": "Rename tab…"
+  },
+  "tabName": {
+    "message": "Tab name"
+  },
+  "saveTabName": {
+    "message": "Save"
+  },
+  "resetTabName": {
+    "message": "Restore original"
+  },
+  "tabChanged": {
+    "message": "The tab was closed or opened another page. Open the menu again to rename it."
+  },
+  "tabRenameUnavailable": {
+    "message": "Chrome does not allow Tab Switcher to rename this page."
+  },
+  "cancelTabName": {
+    "message": "Cancel"
+  }
 }

@@ -26,23 +26,58 @@
   });
 
   async function openEditor(tab) {
-    const { left, top, width, height } = await chrome.windows.get(tab.windowId);
-    const editorWidth = 420;
-    const editorHeight = 235;
-    await chrome.windows.create({
-      url: `${editorUrl}#${tab.id}`,
-      type: "popup",
-      width: editorWidth,
-      height: editorHeight,
-      left: left + Math.round((width - editorWidth) / 2),
-      top: top + Math.round((height - editorHeight) / 2),
-      focused: true
-    });
+    // Chrome does not expose the tab-strip text field. Keep editing over the page.
+    const key = storageKey(tab.id);
+    const { [key]: saved } = await chrome.storage.session.get(key);
+    await chrome.tabs.update(tab.id, {active: true});
+    try {
+      await chrome.scripting.executeScript({target: {tabId: tab.id}, func: showInlineEditor,
+        args: [tab.url, saved?.url === tab.url ? saved.name : (tab.title || ""), Boolean(saved?.name)]});
+    } catch {
+      // Restricted Chrome pages cannot host extension UI; show the existing explanation.
+      const { left, top, width, height } = await chrome.windows.get(tab.windowId);
+      await chrome.windows.create({url: `${editorUrl}#${tab.id}`, type: "popup", width: 420, height: 235,
+        left: left + Math.round((width - 420) / 2), top: top + Math.round((height - 235) / 2), focused: true});
+    }
+  }
+
+  function showInlineEditor(url, initialName, hasCustomName) {
+    document.getElementById('tab-switcher-inline-editor')?.remove();
+    const host = document.createElement('div');
+    host.id = 'tab-switcher-inline-editor';
+    Object.assign(host.style, {position:'fixed', top:'12px', right:'12px', zIndex:'2147483647'});
+    const shadow = host.attachShadow({mode:'closed'});
+    shadow.innerHTML = `<style>
+      .box{width:340px;box-sizing:border-box;padding:18px;background:#181927;color:#f7f7ff;border:1px solid #44465d;border-radius:14px;box-shadow:0 12px 44px #0009;font:13px -apple-system,BlinkMacSystemFont,sans-serif}
+      label{font-weight:700;font-size:14px;display:block;margin-bottom:9px}input{box-sizing:border-box;width:100%;border:1px solid #55586f;border-radius:8px;background:#272938;color:white;padding:9px;font:inherit;outline:none}input:focus{border-color:#9996ff}
+      .actions{display:flex;justify-content:space-between;gap:8px;margin-top:12px}button{border:0;border-radius:8px;padding:8px 11px;background:#36384b;color:white;cursor:pointer;font:inherit}button[type=submit]{background:#9691ff;color:#161622;font-weight:700}button:disabled{opacity:.4;cursor:default}.error{color:#ffaaaa;margin-top:9px}
+    </style><form class="box"><label for="name"></label><input id="name" maxlength="200" autocomplete="off"><div class="actions"><button type="button" id="reset"></button><div><button type="button" id="cancel"></button> <button type="submit"></button></div></div><div class="error" role="alert"></div></form>`;
+    document.documentElement.appendChild(host);
+    const input=shadow.querySelector('input'), form=shadow.querySelector('form');
+    shadow.querySelector('label').textContent=chrome.i18n.getMessage('tabName');
+    shadow.querySelector('#reset').textContent=chrome.i18n.getMessage('resetTabName');
+    shadow.querySelector('#reset').disabled=!hasCustomName;
+    shadow.querySelector('#cancel').textContent=chrome.i18n.getMessage('cancelTabName');
+    shadow.querySelector('[type=submit]').textContent=chrome.i18n.getMessage('saveTabName');
+    input.value=initialName.slice(0,200); input.focus(); input.select();
+    const save = async title => {
+      try {
+        const result=await chrome.runtime.sendMessage({action:'set_tab_name_inline', url, title});
+        if(result?.ok) {host.remove();return;}
+        shadow.querySelector('.error').textContent=chrome.i18n.getMessage(result?.error || 'tabRenameUnavailable');
+      } catch {shadow.querySelector('.error').textContent=chrome.i18n.getMessage('tabRenameUnavailable');}
+    };
+    form.addEventListener('submit', event=>{event.preventDefault();if(input.value.trim()) save(input.value);});
+    shadow.querySelector('#reset').addEventListener('click',()=>save(''));
+    shadow.querySelector('#cancel').addEventListener('click',()=>host.remove());
+    form.addEventListener('keydown',event=>{event.stopPropagation();if(event.key==='Escape'){event.preventDefault();host.remove();}});
   }
 
   chrome.runtime.onMessage.addListener((request, sender, respond) => {
-    if (!sender.url?.startsWith(`${editorUrl}#`) || request.action !== "set_tab_name") return;
-    const tabId = Number(new URL(sender.url).hash.slice(1));
+    const inline = request.action === "set_tab_name_inline" && sender.tab?.id && sender.frameId === 0;
+    const popup = request.action === "set_tab_name" && sender.url?.startsWith(`${editorUrl}#`);
+    if (!inline && !popup) return;
+    const tabId = inline ? sender.tab.id : Number(new URL(sender.url).hash.slice(1));
     if (!Number.isInteger(tabId) || tabId <= 0) return;
     enqueue(tabId, () => saveTitle(tabId, request)).then(
       respond,

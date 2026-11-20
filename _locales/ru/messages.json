@@ -1,9 +1,26 @@
 {
-  "renameTab": { "message": "Переименовать вкладку" },
-  "renameTabMenu": { "message": "Переименовать вкладку…" },
-  "tabName": { "message": "Имя вкладки" },
-  "saveTabName": { "message": "Сохранить" },
-  "resetTabName": { "message": "Вернуть исходное" },
-  "tabChanged": { "message": "Вкладка закрылась или открыла другую страницу. Чтобы переименовать её, открой меню снова." },
-  "tabRenameUnavailable": { "message": "Chrome ограничивает переименование этой страницы." }
+  "renameTab": {
+    "message": "Переименовать вкладку"
+  },
+  "renameTabMenu": {
+    "message": "Переименовать вкладку…"
+  },
+  "tabName": {
+    "message": "Имя вкладки"
+  },
+  "saveTabName": {
+    "message": "Сохранить"
+  },
+  "resetTabName": {
+    "message": "Вернуть исходное"
+  },
+  "tabChanged": {
+    "message": "Вкладка закрылась или открыла другую страницу. Чтобы переименовать её, открой меню снова."
+  },
+  "tabRenameUnavailable": {
+    "message": "Chrome ограничивает переименование этой страницы."
+  },
+  "cancelTabName": {
+    "message": "Отмена"
+  }
 }

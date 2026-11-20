@@ -416,7 +416,7 @@ async function captureThumbnail(tabId, windowId) {
 	try {
 		await thumbnailCacheReady;
 		const tab = await chrome.tabs.get(tabId);
-		if (!tab.active || !/^https?:|^file:/.test(tab.url || '')) return;
+		if (!tab.active || !tab.url) return;
 		lastCaptureAt = Date.now();
 		const dataUrl = await chrome.tabs.captureVisibleTab(windowId, {format: 'jpeg', quality: 45});
 		// The active tab may have changed while captureVisibleTab was pending.
