@@ -962,7 +962,7 @@ struct SetupView: View {
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
-                    .padding(.top, 8)
+                    .padding(.top, 34)
 
                     // Browsers
                     VStack(alignment: .leading, spacing: 8) {
@@ -1894,6 +1894,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             )
             setupWindow?.title = "Tab Switcher"
             setupWindow?.titlebarAppearsTransparent = true
+            setupWindow?.titleVisibility = .hidden
             setupWindow?.contentView = NSHostingView(rootView: setupView)
             setupWindow?.center()
             setupWindow?.isReleasedWhenClosed = false

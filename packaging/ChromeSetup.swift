@@ -12,9 +12,11 @@ final class ChromeSetupDelegate: NSObject, NSApplicationDelegate, NSWindowDelega
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard !folder.isEmpty, !completed.isEmpty else { NSApp.terminate(nil); return }
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 650), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 650), styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         window.title = "Подключение к Chrome"
         window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.backgroundColor = NSColor(red: 0.10, green: 0.11, blue: 0.17, alpha: 1)
         window.isReleasedWhenClosed = false
         window.delegate = self
         window.contentView = NSHostingView(rootView: ChromeSetupView(model: self))
@@ -106,7 +108,9 @@ struct ChromeSetupView: View {
                 }.buttonStyle(.plain).background(accent, in: RoundedRectangle(cornerRadius: 11)).foregroundStyle(Color.black.opacity(0.85))
             }
         }
-        .padding(28)
+        .padding(.horizontal, 28)
+        .padding(.bottom, 28)
+        .padding(.top, 42)
         .frame(width: 620, height: 650)
         .background(LinearGradient(colors: [Color(red: 0.10, green: 0.11, blue: 0.17), Color(red: 0.055, green: 0.06, blue: 0.09)], startPoint: .topLeading, endPoint: .bottomTrailing))
         .preferredColorScheme(.dark)
