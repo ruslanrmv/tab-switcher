@@ -71,6 +71,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 
 var processCommand = function(command) {
 	log('Command recd:' + command);
+	if (command === 'rename_current_tab') return;
 	var fastswitch = true;
 	slowswitchForward = false;
 	if(command == "alt_switch_fast") {

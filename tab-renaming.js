@@ -20,6 +20,13 @@
   chrome.runtime.onInstalled.addListener(ensureMenu);
   ensureMenu();
 
+  chrome.commands.onCommand.addListener(command => {
+    if (command !== "rename_current_tab") return;
+    chrome.tabs.query({active: true, lastFocusedWindow: true}).then(tabs => {
+      if (tabs[0]?.id) return openEditor(tabs[0]);
+    }).catch(error => console.warn("Could not open tab name editor:", error.message));
+  });
+
   chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId !== menuId || !tab?.id) return;
     openEditor(tab).catch(error => console.warn("Could not open tab name editor:", error.message));
@@ -45,17 +52,18 @@
     document.getElementById('tab-switcher-inline-editor')?.remove();
     const host = document.createElement('div');
     host.id = 'tab-switcher-inline-editor';
-    Object.assign(host.style, {position:'fixed', top:'12px', right:'12px', zIndex:'2147483647'});
+    Object.assign(host.style, {position:'fixed', top:'50%', left:'50%', transform:'translate(-50%, -50%)', zIndex:'2147483647'});
     const shadow = host.attachShadow({mode:'closed'});
     shadow.innerHTML = `<style>
-      .box{width:340px;box-sizing:border-box;padding:18px;background:#181927;color:#f7f7ff;border:1px solid #44465d;border-radius:14px;box-shadow:0 12px 44px #0009;font:13px -apple-system,BlinkMacSystemFont,sans-serif}
+      .box{width:min(340px, calc(100vw - 32px));box-sizing:border-box;padding:18px;background:#181927;color:#f7f7ff;border:1px solid #44465d;border-radius:14px;box-shadow:0 12px 44px #0009;font:13px -apple-system,BlinkMacSystemFont,sans-serif}
       label{font-weight:700;font-size:14px;display:block;margin-bottom:9px}input{box-sizing:border-box;width:100%;border:1px solid #55586f;border-radius:8px;background:#272938;color:white;padding:9px;font:inherit;outline:none}input:focus{border-color:#9996ff}
-      .actions{display:flex;justify-content:space-between;gap:8px;margin-top:12px}button{border:0;border-radius:8px;padding:8px 11px;background:#36384b;color:white;cursor:pointer;font:inherit}button[type=submit]{background:#9691ff;color:#161622;font-weight:700}button:disabled{opacity:.4;cursor:default}.error{color:#ffaaaa;margin-top:9px}
-    </style><form class="box"><label for="name"></label><input id="name" maxlength="200" autocomplete="off"><div class="actions"><button type="button" id="reset"></button><div><button type="button" id="cancel"></button> <button type="submit"></button></div></div><div class="error" role="alert"></div></form>`;
+      .actions{display:flex;align-items:center;gap:8px;margin-top:14px}.actions-spacer{flex:1;min-width:0}button{box-sizing:border-box;height:36px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;border:0;border-radius:9px;padding:0 13px;background:#333548;color:#f7f7ff;cursor:pointer;font:500 12px -apple-system,BlinkMacSystemFont,sans-serif}button:hover:not(:disabled){filter:brightness(1.12)}button:focus-visible{outline:2px solid #aaa6ff;outline-offset:2px}button[type=submit]{background:#9691ff;color:#161622;font-weight:700}button:disabled{opacity:.35;cursor:default}#reset{width:36px;min-width:36px;padding:0;background:#292b3c}#reset svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.error:not(:empty){color:#ffaaaa;margin-top:10px;line-height:1.35}
+    </style><form class="box"><label for="name"></label><input id="name" maxlength="200" autocomplete="off"><div class="actions"><button type="button" id="reset"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.4 5.7"/><path d="M4 5v6h6"/></svg></button><span class="actions-spacer"></span><button type="button" id="cancel"></button><button type="submit"></button></div><div class="error" role="alert"></div></form>`;
     document.documentElement.appendChild(host);
     const input=shadow.querySelector('input'), form=shadow.querySelector('form');
     shadow.querySelector('label').textContent=chrome.i18n.getMessage('tabName');
-    shadow.querySelector('#reset').textContent=chrome.i18n.getMessage('resetTabName');
+    shadow.querySelector('#reset').title=chrome.i18n.getMessage('resetTabName');
+    shadow.querySelector('#reset').setAttribute('aria-label',chrome.i18n.getMessage('resetTabName'));
     shadow.querySelector('#reset').disabled=!hasCustomName;
     shadow.querySelector('#cancel').textContent=chrome.i18n.getMessage('cancelTabName');
     shadow.querySelector('[type=submit]').textContent=chrome.i18n.getMessage('saveTabName');

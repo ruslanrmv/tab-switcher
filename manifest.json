@@ -46,6 +46,13 @@
         "mac": "Alt+Shift+S"
       },
       "description": "Cycle forward through tabs"
+    },
+    "rename_current_tab": {
+      "suggested_key": {
+        "default": "Alt+Shift+N",
+        "mac": "Alt+Shift+N"
+      },
+      "description": "__MSG_renameTab__"
     }
   },
   "action": {
