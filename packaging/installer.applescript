@@ -6,12 +6,20 @@ on run
 		display dialog "Установим Tab Switcher Personal для Chrome. Программа и связь с расширением настроятся автоматически. Затем нужно разрешить доступ macOS и один раз выбрать папку расширения в Chrome." buttons {"Отмена", "Установить"} default button "Установить" with title "Установка Tab Switcher"
 		set resultText to do shell script quoted form of (bundleFolder & "install.sh")
 		if resultText is not "OK" then error resultText
+		set readyFile to (POSIX path of (path to library folder from user domain)) & "Application Support/TabSwitcher/accessibility.ready"
+		do shell script "/bin/rm -f " & quoted form of readyFile
 		do shell script "/usr/bin/open " & quoted form of appPath
-		repeat
-			set permissionChoice to button returned of (display dialog "Шаг 1 из 2: macOS попросит разрешить Tab Switcher Personal управление компьютером для Control + Tab. В системном запросе откройте настройки и включите доступ. Затем вернитесь сюда и нажмите «Продолжить». Если запрос не появился, нажмите «Открыть настройки»." buttons {"Отмена", "Открыть настройки", "Продолжить"} default button "Продолжить" with title "Доступ macOS")
-			if permissionChoice is "Продолжить" then exit repeat
-			do shell script "/usr/bin/open 'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'"
+		set accessGranted to false
+		repeat 300 times
+			try
+				do shell script "/bin/test -f " & quoted form of readyFile
+				set accessGranted to true
+				exit repeat
+			on error
+				delay 1
+			end try
 		end repeat
+		if not accessGranted then error "Доступ macOS не получен. Включите Tab Switcher Personal в настройках «Управление устройством и доступ к данным» и запустите установщик снова."
 		set the clipboard to supportFolder
 		do shell script "/usr/bin/open -a 'Google Chrome' 'chrome://extensions/'"
 		display dialog "Шаг 2 из 2: в Chrome включите «Режим разработчика» и нажмите «Загрузить распакованное расширение». В окне выбора нажмите ⌘⇧G, вставьте скопированный путь сочетанием ⌘V и нажмите Return, затем «Выбрать». Путь уже скопирован. Вернитесь сюда после загрузки." buttons {"Отмена", "Готово"} default button "Готово" with title "Подключение расширения"

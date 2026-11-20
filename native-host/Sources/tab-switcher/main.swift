@@ -2885,6 +2885,16 @@ func showAccessibilityAlert() {
     }
 }
 
+// Signal the installer only after this app has actually installed its event tap.
+#if PERSONAL_BUILD
+func writeAccessibilityReady() {
+    guard let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return }
+    let directory = base.appendingPathComponent("TabSwitcher", isDirectory: true)
+    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    try? Data().write(to: directory.appendingPathComponent("accessibility.ready"), options: .atomic)
+}
+#endif
+
 // Main entry point
 func main() {
     debugLog("Tab Switcher Native Host starting (PID \(myProcessId))...")
@@ -2951,8 +2961,21 @@ func main() {
         eventTapSuccess = setupEventTap()
         if !eventTapSuccess {
             debugLog("Failed to setup event tap - likely missing accessibility permission")
+            #if PERSONAL_BUILD
+            Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
+                guard isEventTapLeader, AXIsProcessTrusted() else { return }
+                if setupEventTap() {
+                    debugLog("Event tap setup complete after accessibility permission")
+                    if directLaunch { writeAccessibilityReady() }
+                    timer.invalidate()
+                }
+            }
+            #endif
         } else {
             debugLog("Event tap setup complete (we are the leader)")
+            #if PERSONAL_BUILD
+            if directLaunch { writeAccessibilityReady() }
+            #endif
         }
     } else {
         debugLog("Not the event tap leader, will listen for notifications only")
