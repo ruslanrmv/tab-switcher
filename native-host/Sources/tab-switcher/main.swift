@@ -957,16 +957,16 @@ struct SetupView: View {
                                 .padding(.bottom, 4)
                         }
                         Text("Tab Switcher")
-                            .font(.system(size: 18, weight: .bold))
-                        Text("v\(APP_VERSION)")
-                            .font(.system(size: 11))
+                            .font(.system(size: 22, weight: .bold))
+                        Text("Быстрое переключение вкладок · v\(APP_VERSION)")
+                            .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
                     .padding(.top, 8)
 
                     // Browsers
                     VStack(alignment: .leading, spacing: 8) {
-                        sectionHeader("Browsers")
+                        sectionHeader("Браузеры")
 
                         VStack(spacing: 0) {
                             ForEach(Array(configManager.installedBrowsers.enumerated()), id: \.element.id) { index, browser in
@@ -976,23 +976,23 @@ struct SetupView: View {
                                 }
                             }
                         }
-                        .background(Color.secondary.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .background(Color.secondary.opacity(0.07))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
 
                     // Keyboard Shortcuts
                     VStack(alignment: .leading, spacing: 8) {
-                        sectionHeader("Keyboard Shortcuts")
+                        sectionHeader("Быстрые клавиши")
 
                         VStack(spacing: 1) {
-                            shortcutRow("Switch Tabs", shortcut: $configManager.shortcuts.tabSwitch)
+                            shortcutRow("Переключить вкладку", shortcut: $configManager.shortcuts.tabSwitch)
                             Divider().padding(.horizontal, 12)
-                            shortcutRow("Copy URL", shortcut: $configManager.shortcuts.copyUrl)
+                            shortcutRow("Скопировать ссылку", shortcut: $configManager.shortcuts.copyUrl)
                         }
-                        .background(Color.secondary.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .background(Color.secondary.opacity(0.07))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
 
-                        Button("Reset to Defaults") {
+                        Button("Восстановить по умолчанию") {
                             configManager.shortcuts = .defaults
                             configManager.saveShortcuts()
                         }
@@ -1052,7 +1052,7 @@ struct SetupView: View {
                 .disabled(!updater.canCheckForUpdates)
                 #endif
                 Spacer()
-                Button("Done") {
+                Button("Готово") {
                     configManager.showingSetup = false
                 }
                 .buttonStyle(.borderedProminent)
@@ -1138,7 +1138,7 @@ struct BrowserRowView: View {
                     Spacer()
 
                     if currentBrowser?.isEnabled == true {
-                        Text("Enabled")
+                        Text("Включён")
                             .font(.system(size: 11))
                             .foregroundColor(.green)
                     }
@@ -1167,9 +1167,9 @@ struct BrowserRowView: View {
                                 set: { configManager.setCombineWindows(id: browser.id, combine: $0) }
                             )) {
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text("Cycle through all windows")
+                                    Text("Вкладки всех окон")
                                         .font(.system(size: 12))
-                                    Text("When off, only tabs from the active window are shown")
+                                    Text("Иначе показываются вкладки текущего окна")
                                         .font(.system(size: 10))
                                         .foregroundColor(.secondary)
                                 }
@@ -1205,7 +1205,7 @@ struct BrowserRowView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                         }
 
-                        Button("Disable Browser") {
+                        Button("Отключить браузер") {
                             configManager.disableBrowser(id: browser.id)
                         }
                         .font(.system(size: 11))
@@ -1213,11 +1213,11 @@ struct BrowserRowView: View {
                         .buttonStyle(.plain)
                     } else {
                         // Not enabled — simple enable button
-                        Text("Enable Tab Switcher for \(browser.name)")
+                        Text("Включить Tab Switcher для \(browser.name)")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
 
-                        Button("Enable") {
+                        Button("Включить") {
                             configManager.enableBrowser(id: browser.id)
                         }
                         .buttonStyle(.borderedProminent)
@@ -1445,7 +1445,7 @@ class ToastWindow: NSPanel {
 struct TabCardView: View {
     let tab: TabInfo
     let isSelected: Bool
-    let cornerRadius: CGFloat = 10
+    let cornerRadius: CGFloat = 13
     let cardWidth: CGFloat = 220
     let cardHeight: CGFloat = 146
     
@@ -1462,7 +1462,7 @@ struct TabCardView: View {
                     // Fallback gradient with favicon
                     ZStack {
                         LinearGradient(
-                            gradient: Gradient(colors: [Color.gray.opacity(0.6), Color.gray.opacity(0.4)]),
+                            gradient: Gradient(colors: [Color(red: 0.25, green: 0.25, blue: 0.38), Color(red: 0.12, green: 0.13, blue: 0.21)]),
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -1502,7 +1502,7 @@ struct TabCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius)
-                .stroke(isSelected ? Color.white : Color.white.opacity(0.15), lineWidth: isSelected ? 3 : 1)
+                .stroke(isSelected ? Color(red: 0.70, green: 0.69, blue: 1.0) : Color.white.opacity(0.17), lineWidth: isSelected ? 3 : 1)
         )
     }
 }
@@ -1591,7 +1591,7 @@ struct TabSwitcherView: View {
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
             )
         }
     }
