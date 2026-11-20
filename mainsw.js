@@ -7,7 +7,6 @@ importScripts("tab-renaming.js");
 
 // Version checking
 var EXTENSION_VERSION = chrome.runtime.getManifest().version;
-var VERSION_CHECK_URL = "https://tabswitcher.app/version.json";
 
 // MRU (Most Recently Used) tab tracking
 var mru = [];
@@ -54,17 +53,10 @@ var log = function(str) {
 	}
 }
 
-// Welcome/setup page URL (update this once website is live)
-var SETUP_PAGE_URL = "https://nechemyaspitz.github.io/tab-switcher/setup.html";
 
 // Initialize on install/update
 chrome.runtime.onInstalled.addListener((details) => {
 	log("Extension " + details.reason);
-	
-	// Open setup page on first install
-	if (details.reason === "install") {
-		chrome.tabs.create({ url: SETUP_PAGE_URL });
-	}
 	
 	initialize();
 });
@@ -139,12 +131,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 		return true;
 	}
 	
-	if (request.action === "get_version_info") {
-		chrome.storage.local.get(["versionInfo"], function(result) {
-			sendResponse(result.versionInfo || null);
-		});
-		return true;
-	}
 
 	if (request.action === "ping_native_host") {
 		// Clear any previous pending ping
@@ -201,40 +187,6 @@ chrome.runtime.onStartup.addListener(function () {
 });
 
 // ============================================
-// Version Checking
-// ============================================
-
-var VERSION_CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours
-
-function checkForUpdates() {
-	log("Checking for updates...");
-	fetch(VERSION_CHECK_URL, { cache: "no-cache" })
-		.then(function(response) { return response.json(); })
-		.then(function(data) {
-			var isManualInstall = chrome.runtime.getManifest().update_url === undefined;
-			var versionInfo = {
-				currentVersion: EXTENSION_VERSION,
-				latestExtensionVersion: data.extension ? data.extension.version : null,
-				latestExtensionNotes: data.extension ? data.extension.releaseNotes : null,
-				chromeWebStoreUrl: data.extension ? data.extension.chromeWebStoreUrl : null,
-				latestAppVersion: data.app ? data.app.version : null,
-				latestAppNotes: data.app ? data.app.releaseNotes : null,
-				appDownloadUrl: data.app ? data.app.downloadUrl : null,
-				isManualInstall: isManualInstall,
-				lastChecked: Date.now()
-			};
-			chrome.storage.local.set({ versionInfo: versionInfo });
-			log("Version check complete: current=" + EXTENSION_VERSION + ", latest=" + versionInfo.latestExtensionVersion + ", manual=" + isManualInstall);
-		})
-		.catch(function(err) {
-			log("Version check failed: " + err.message);
-		});
-}
-
-// Check on startup and every 6 hours
-checkForUpdates();
-setInterval(checkForUpdates, VERSION_CHECK_INTERVAL);
-
 
 var doIntSwitch = function() {
 	log("TabSwitch:: in int switch, intSwitchCount: "+intSwitchCount+", mru.length: "+mru.length);

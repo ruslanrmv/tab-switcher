@@ -8,8 +8,6 @@ import UserNotifications
 import ScreenCaptureKit
 
 let APP_VERSION = "3.7.5"
-let CWS_EXTENSION_ID = "pbpgegamabjlnegmfcjelciaenfkmfoo"
-let CWS_URL = "https://chromewebstore.google.com/detail/tab-switcher/pbpgegamabjlnegmfcjelciaenfkmfoo"
 
 // MARK: - Keyboard Shortcut Configuration
 
@@ -370,38 +368,8 @@ class BrowserConfigManager: ObservableObject {
         browsers = loadedBrowsers
     }
 
-    /// Fetches the browser list from the website and caches it locally.
-    /// On success, reloads the browser list to pick up any new browsers.
-    func fetchRemoteBrowserList() {
-        guard let url = URL(string: "https://tabswitcher.app/browsers.json") else { return }
+    func fetchRemoteBrowserList() {}
 
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-            guard let self = self,
-                  let data = data,
-                  let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
-                debugLog("Failed to fetch remote browser list: \(error?.localizedDescription ?? "unknown error")")
-                return
-            }
-
-            // Validate it's a proper browser list
-            guard let definitions = try? JSONDecoder().decode([BrowserDefinition].self, from: data),
-                  !definitions.isEmpty else {
-                debugLog("Remote browser list was empty or invalid")
-                return
-            }
-
-            // Cache it
-            try? data.write(to: self.cachedBrowserListURL)
-            debugLog("Cached remote browser list (\(definitions.count) browsers)")
-
-            // Reload config on main thread to pick up new browsers
-            DispatchQueue.main.async {
-                self.loadConfig()
-            }
-        }.resume()
-    }
-    
     func saveConfig() {
         if let data = try? JSONEncoder().encode(browsers) {
             try? data.write(to: configURL)
@@ -450,11 +418,11 @@ class BrowserConfigManager: ObservableObject {
                 // Create manifest directory if needed
                 try? FileManager.default.createDirectory(atPath: manifestDir, withIntermediateDirectories: true)
 
-                // Always include CWS extension ID; also include legacy manual ID for backward compat
-                var origins = ["chrome-extension://\(CWS_EXTENSION_ID)/"]
-                if let legacyId = browser.extensionId, !legacyId.isEmpty, legacyId != CWS_EXTENSION_ID {
-                    origins.append("chrome-extension://\(legacyId)/")
+                guard let extensionId = browser.extensionId, !extensionId.isEmpty else {
+                    debugLog("No extension ID configured for \(browser.name); skipping manifest")
+                    continue
                 }
+                let origins = ["chrome-extension://\(extensionId)/"]
 
                 // Create manifest
                 let manifest: [String: Any] = [
@@ -665,24 +633,7 @@ class BackgroundUpdateChecker: NSObject, ObservableObject, UNUserNotificationCen
         }
     }
 
-    private func checkForUpdates() {
-        guard isUpdateCheckLeader else { return }
-        guard let url = URL(string: "https://tabswitcher.app/version.json") else { return }
-
-        let task = URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
-            guard let self = self, let data = data, error == nil else {
-                debugLog("Version check failed: \(error?.localizedDescription ?? "unknown")")
-                return
-            }
-            do {
-                let info = try JSONDecoder().decode(VersionInfo.self, from: data)
-                self.processVersionInfo(info)
-            } catch {
-                debugLog("Failed to decode version.json: \(error)")
-            }
-        }
-        task.resume()
-    }
+    private func checkForUpdates() {}
 
     private func processVersionInfo(_ info: VersionInfo) {
         let notified = loadNotifiedVersions()
@@ -1028,41 +979,6 @@ struct SetupView: View {
                     }
                     #endif
 
-                    // Extension update notice
-                    if configManager.showExtensionUpdateInstructions {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.orange)
-                                    .font(.system(size: 12))
-                                Text("Extension Update Available")
-                                    .font(.system(size: 12, weight: .semibold))
-                                Spacer()
-                                Button {
-                                    configManager.showExtensionUpdateInstructions = false
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                            }
-
-                            Text("Install the latest version from the Chrome Web Store for automatic updates.")
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-
-                            Button("Open Chrome Web Store") {
-                                if let url = URL(string: CWS_URL) {
-                                    NSWorkspace.shared.open(url)
-                                }
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-                        }
-                        .padding(12)
-                        .background(Color.orange.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)
@@ -1132,16 +1048,6 @@ struct BrowserRowView: View {
         configManager.browsers.first { $0.id == browser.id }
     }
 
-    /// Whether this browser has a legacy (non-CWS) manual extension ID
-    private var hasLegacyExtensionId: Bool {
-        #if PERSONAL_BUILD
-        return false
-        #else
-        guard let extId = currentBrowser?.extensionId, !extId.isEmpty else { return false }
-        return extId != CWS_EXTENSION_ID
-        #endif
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             // Main row — tap to expand/collapse
@@ -1208,33 +1114,6 @@ struct BrowserRowView: View {
                             }
                             .toggleStyle(.switch)
                             .controlSize(.small)
-                        }
-
-                        // Migration notice for users with manually-loaded extension
-                        if hasLegacyExtensionId {
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundColor(.orange)
-                                        .font(.system(size: 10))
-                                    Text("Using manually loaded extension")
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundColor(.orange)
-                                }
-                                Text("Install from the Chrome Web Store for automatic updates, then remove the manually loaded version.")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                                Button("Open Chrome Web Store") {
-                                    if let url = URL(string: CWS_URL) {
-                                        NSWorkspace.shared.open(url)
-                                    }
-                                }
-                                .controlSize(.small)
-                                .font(.system(size: 11))
-                            }
-                            .padding(8)
-                            .background(Color.orange.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
                         }
 
                         Button("Отключить браузер") {
