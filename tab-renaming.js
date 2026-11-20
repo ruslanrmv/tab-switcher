@@ -4,22 +4,21 @@
   const pending = new Map();
   const storageKey = tabId => `renamedTab:${tabId}`;
 
-  chrome.runtime.onInstalled.addListener(() => {
+  function ensureMenu() {
+    const properties = { title: chrome.i18n.getMessage("renameTabMenu"), contexts: ["tab"] };
     try {
-      chrome.contextMenus.create({
-        id: menuId,
-        title: chrome.i18n.getMessage("renameTabMenu"),
-        contexts: ["tab"]
-      }, () => {
-        if (chrome.runtime.lastError) {
-          console.debug("Rename tab menu:", chrome.runtime.lastError.message);
-        }
+      chrome.contextMenus.update(menuId, properties, () => {
+        if (!chrome.runtime.lastError) return;
+        chrome.contextMenus.create({ id: menuId, ...properties }, () => {
+          if (chrome.runtime.lastError) console.debug("Rename tab menu:", chrome.runtime.lastError.message);
+        });
       });
     } catch (error) {
-      // Older Chromium versions reject the tab context during argument validation.
       console.debug("Rename tab menu:", error.message);
     }
-  });
+  }
+  chrome.runtime.onInstalled.addListener(ensureMenu);
+  ensureMenu();
 
   chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId !== menuId || !tab?.id) return;
