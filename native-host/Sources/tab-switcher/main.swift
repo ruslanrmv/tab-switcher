@@ -5,6 +5,7 @@ import Carbon.HIToolbox
 import ApplicationServices
 import Sparkle
 import UserNotifications
+import ScreenCaptureKit
 
 let APP_VERSION = "3.7.5"
 let CWS_EXTENSION_ID = "pbpgegamabjlnegmfcjelciaenfkmfoo"
@@ -942,6 +943,9 @@ struct ShortcutRecorderView: NSViewRepresentable {
 struct SetupView: View {
     @ObservedObject var configManager = BrowserConfigManager.shared
     @ObservedObject var updater = updaterViewModel
+    #if PERSONAL_BUILD
+    @State private var screenCaptureAllowed = CGPreflightScreenCaptureAccess()
+    #endif
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1000,6 +1004,29 @@ struct SetupView: View {
                         .buttonStyle(.link)
                         .padding(.leading, 4)
                     }
+
+                    #if PERSONAL_BUILD
+                    VStack(alignment: .leading, spacing: 8) {
+                        sectionHeader("Превью системных страниц")
+                        Text("Для вкладок настроек и Chrome Web Store macOS требует доступ к записи экрана. Звук не записывается.")
+                            .font(.system(size: 12)).foregroundColor(.secondary)
+                        if screenCaptureAllowed {
+                            Label("Доступ разрешён", systemImage: "checkmark.circle.fill")
+                                .font(.system(size: 12)).foregroundColor(.green)
+                        } else {
+                            HStack {
+                                Button("Разрешить запись экрана") {
+                                    _ = CGRequestScreenCaptureAccess()
+                                }.buttonStyle(.bordered)
+                                Button("Открыть настройки") {
+                                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                                        NSWorkspace.shared.open(url)
+                                    }
+                                }.buttonStyle(.link)
+                            }
+                        }
+                    }
+                    #endif
 
                     // Extension update notice
                     if configManager.showExtensionUpdateInstructions {
@@ -1063,6 +1090,11 @@ struct SetupView: View {
             .padding(.vertical, 12)
         }
         .frame(width: 460, height: 580)
+        #if PERSONAL_BUILD
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            screenCaptureAllowed = CGPreflightScreenCaptureAccess()
+        }
+        #endif
     }
 
     private func sectionHeader(_ title: String) -> some View {
@@ -2052,6 +2084,53 @@ func readMessage() -> [String: Any]? {
     return result
 }
 
+// Capture only the focused window of the browser that owns this native host.
+// macOS screen-recording access is checked without triggering a prompt here.
+func captureBrowserPreview(_ message: [String: Any]) {
+    guard let requestId = message["requestId"] as? String,
+          let bounds = message["bounds"] as? [String: Double],
+          let x = bounds["left"], let y = bounds["top"],
+          let width = bounds["width"], let height = bounds["height"] else { return }
+    let reply: ([String: Any]) -> Void = { result in
+        DispatchQueue.main.async { sendMessage(result.merging(["action": "screen_preview", "requestId": requestId]) { first, _ in first }) }
+    }
+    guard CGPreflightScreenCaptureAccess() else { reply(["error": "screen_permission_required"]); return }
+    guard let owner = ownerBrowserProcessId,
+          NSWorkspace.shared.frontmostApplication?.processIdentifier == owner else {
+        reply(["error": "browser_not_frontmost"]); return
+    }
+    Task {
+        do {
+            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            guard NSWorkspace.shared.frontmostApplication?.processIdentifier == owner else {
+                reply(["error": "browser_not_frontmost"]); return
+            }
+            let expected = CGRect(x: x, y: y, width: width, height: height)
+            let candidates = content.windows.filter { $0.owningApplication?.processID == owner && $0.isOnScreen }
+            guard let window = candidates.min(by: { a, b in
+                func distance(_ frame: CGRect) -> CGFloat {
+                    abs(frame.minX - expected.minX) + abs(frame.minY - expected.minY) + abs(frame.width - expected.width) + abs(frame.height - expected.height)
+                }
+                return distance(a.frame) < distance(b.frame)
+            }), abs(window.frame.minX - expected.minX) < 8, abs(window.frame.minY - expected.minY) < 8,
+                abs(window.frame.width - expected.width) < 8, abs(window.frame.height - expected.height) < 8 else {
+                reply(["error": "browser_window_not_found"]); return
+            }
+            let filter = SCContentFilter(desktopIndependentWindow: window)
+            let configuration = SCStreamConfiguration()
+            configuration.width = 480
+            configuration.height = max(1, Int((480 * window.frame.height / max(window.frame.width, 1)).rounded()))
+            configuration.showsCursor = false
+            let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
+            guard NSWorkspace.shared.frontmostApplication?.processIdentifier == owner,
+                  let data = NSBitmapImageRep(cgImage: image).representation(using: .jpeg, properties: [.compressionFactor: 0.55]) else {
+                reply(["error": "capture_unavailable"]); return
+            }
+            reply(["thumbnail": "data:image/jpeg;base64," + data.base64EncodedString()])
+        } catch { reply(["error": "capture_unavailable"]) }
+    }
+}
+
 // MARK: - Message Handler
 
 func handleMessage(_ message: [String: Any]) {
@@ -2063,6 +2142,8 @@ func handleMessage(_ message: [String: Any]) {
     debugLog("Handling action: \(action)")
     
     switch action {
+    case "capture_screen_preview":
+        captureBrowserPreview(message)
     case "show_switcher":
         if let tabsData = message["tabs"] as? [[String: Any]],
            let selectedIndex = message["selectedIndex"] as? Int {

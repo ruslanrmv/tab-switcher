@@ -44,6 +44,7 @@ var thumbnailCacheReady = chrome.storage.session.get('tabSwitcherThumbnails').th
 }).catch(() => {});
 var captureTimers = new Map();
 var lastCaptureAt = 0;
+var pendingScreenPreviews = new Map();
 var MAX_THUMBNAILS = 20; // Limit memory usage - keep only 20 most recent thumbnails
 var lastActiveTabId = null; // Track the last active tab for thumbnail capture
 
@@ -418,7 +419,23 @@ async function captureThumbnail(tabId, windowId) {
 		const tab = await chrome.tabs.get(tabId);
 		if (!tab.active || !tab.url) return;
 		lastCaptureAt = Date.now();
-		const dataUrl = await chrome.tabs.captureVisibleTab(windowId, {format: 'jpeg', quality: 45});
+		let dataUrl;
+		try {
+			dataUrl = await chrome.tabs.captureVisibleTab(windowId, {format: 'jpeg', quality: 45});
+		} catch (error) {
+			// Only use the macOS fallback for protected Chrome pages and Web Store.
+			const protectedPage = /^(chrome:|chrome-extension:|devtools:)/.test(tab.url) || /^https:\/\/(chromewebstore\.google\.com|chrome\.google\.com\/webstore)(\/|$)/.test(tab.url);
+			if (!protectedPage) throw error;
+			const win = await chrome.windows.get(windowId);
+			if (!win.focused || !nativePort) return;
+			const requestId = crypto.randomUUID();
+			dataUrl = await new Promise(resolve => {
+				const timer = setTimeout(() => { pendingScreenPreviews.delete(requestId); resolve(null); }, 5000);
+				pendingScreenPreviews.set(requestId, image => { clearTimeout(timer); resolve(image); });
+				sendToNativeHost({action:'capture_screen_preview', requestId, bounds:{left:win.left, top:win.top, width:win.width, height:win.height}});
+			});
+			if (!dataUrl) return;
+		}
 		// The active tab may have changed while captureVisibleTab was pending.
 		const current = await chrome.tabs.get(tabId);
 		if (!current.active || current.url !== tab.url) return;
@@ -527,12 +544,16 @@ var connectNativeHost = function() {
 		log("Connected to native host");
 
 		nativePort.onMessage.addListener(function(message) {
-			log("Native message received: " + JSON.stringify(message));
+			log("Native message received: " + (message.action === "screen_preview" ? "screen_preview" : JSON.stringify(message)));
 			
 			// Mark connection as alive on any message
 			nativeHostConnected = true;
 			
-			if (message.action === "ready") {
+			if (message.action === "screen_preview") {
+				const finish = pendingScreenPreviews.get(message.requestId);
+				pendingScreenPreviews.delete(message.requestId);
+				if (finish) finish(message.thumbnail || null);
+			} else if (message.action === "ready") {
 				log("Native host is ready, registering browser: " + browserBundleId);
 				// Register this extension with its browser's bundle ID
 				sendToNativeHost({ action: "register", bundleId: browserBundleId, extensionVersion: EXTENSION_VERSION });
