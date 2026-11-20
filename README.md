@@ -144,3 +144,7 @@ Run `scripts/build-personal.sh` on macOS with Xcode command-line tools. By defau
 ## Publishing this checkout
 
 The local `publish` remote is configured with push URLs for the GitHub fork and the private Forgejo repository. After committing, run `git push publish HEAD` to publish the current branch to both. Git contacts the two servers separately; check both results if either push fails. The repository-specific SSH configuration and deploy key stay outside the tracked source.
+
+## Extension-only prototype
+
+[`extension-only/`](extension-only/) contains a standalone Chrome implementation that does not use the native helper. See its README for preview behavior, permissions, and the unsupported Control+Tab configuration.

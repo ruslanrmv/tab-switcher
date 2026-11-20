@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Switcher Personal — Extension Only",
+  "version": "0.1.0",
+  "description": "Switch between recently used Chrome tabs with visual previews.",
+  "permissions": ["tabs", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "commands": {
+    "open-switcher": {
+      "suggested_key": { "default": "Alt+Q", "mac": "MacCtrl+Q" },
+      "description": "Cycle recent tabs"
+    },
+    "cycle-backward": {
+      "description": "Cycle recent tabs backwards"
+    }
+  },
+  "action": { "default_title": "Recent tabs" }
+}

@@ -1,0 +1,7 @@
+# Tab Switcher — extension-only prototype
+
+This is a standalone Manifest V3 Chrome extension. It does not use the native macOS helper. It displays recent tabs in a centered popup, with a bounded in-memory cache of 20 page previews. A preview becomes available after a page has been active long enough for a capture; restricted or uncaptured pages show a placeholder. Previews and navigation state are not transmitted to a server or stored persistently.
+
+Load `extension-only` as an unpacked extension in Chrome Developer mode. The default shortcut is Control+Q on macOS (Alt+Q on other platforms). Chrome's normal shortcut settings do not allow Tab in an extension command. If Control+Tab is required, Chrome's internal `chrome.developerPrivate.updateExtensionCommand` function can assign `Ctrl+Tab` to `open-switcher` and `Ctrl+Shift+Tab` to `cycle-backward` from the DevTools console of `chrome://extensions/shortcuts`, using the installed extension's actual ID. This is an unsupported Chrome interface and may stop working or change on a browser update. Remove or change these shortcuts in Chrome's extensions shortcut settings when uninstalling or switching implementations.
+
+The extension needs access to visited pages to capture thumbnails, and access to tab information to order and select tabs. The popup is a Chrome window, so its appearance and focus behavior can differ from a native overlay. Control release is handled by that popup; if the popup cannot receive the event, press Enter to select or Escape to cancel.
