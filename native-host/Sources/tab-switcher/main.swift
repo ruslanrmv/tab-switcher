@@ -497,13 +497,17 @@ final class UpdaterViewModel: ObservableObject {
     }
 
     func startUpdater() {
+        #if !PERSONAL_BUILD
         updaterController.startUpdater()
         updaterController.updater.publisher(for: \.canCheckForUpdates)
             .assign(to: &$canCheckForUpdates)
+        #endif
     }
 
     func checkForUpdates() {
+        #if !PERSONAL_BUILD
         updaterController.checkForUpdates(nil)
+        #endif
     }
 }
 
@@ -1038,11 +1042,13 @@ struct SetupView: View {
             // Footer
             Divider()
             HStack {
+                #if !PERSONAL_BUILD
                 Button("Check for Updates...") {
                     updater.checkForUpdates()
                 }
                 .font(.system(size: 12))
                 .disabled(!updater.canCheckForUpdates)
+                #endif
                 Spacer()
                 Button("Done") {
                     configManager.showingSetup = false
@@ -1907,10 +1913,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: "About Tab Switcher", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        #if !PERSONAL_BUILD
         let checkForUpdatesItem = NSMenuItem(title: "Check for Updates...",
             action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "")
         checkForUpdatesItem.target = updaterViewModel.updaterController
         appMenu.addItem(checkForUpdatesItem)
+        #endif
         appMenu.addItem(NSMenuItem.separator())
         appMenu.addItem(withTitle: "Hide Tab Switcher", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         let hideOthersItem = appMenu.addItem(withTitle: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
@@ -2985,7 +2993,9 @@ func main() {
     }
 
     // Start background update checker (leader election ensures only one instance checks)
+    #if !PERSONAL_BUILD
     BackgroundUpdateChecker.shared.startPeriodicChecks()
+    #endif
 
     debugLog("Starting NSApplication run loop")
     app.run()
