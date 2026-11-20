@@ -9,8 +9,23 @@ final class ChromeSetupDelegate: NSObject, NSApplicationDelegate, NSWindowDelega
     let folder = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : ""
     let completed = CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : ""
     @Published var copied = true
+    var dialogMode = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if CommandLine.arguments.count >= 5 && CommandLine.arguments[1] == "--dialog" {
+            dialogMode = true
+            let kind = CommandLine.arguments[2]
+            window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 300), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
+            window.titleVisibility = .hidden
+            window.titlebarAppearsTransparent = true
+            window.isReleasedWhenClosed = false
+            window.delegate = self
+            window.contentView = NSHostingView(rootView: InstallerDialogView(kind: kind, heading: CommandLine.arguments[3], message: CommandLine.arguments[4]))
+            window.center()
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
         guard !folder.isEmpty, !completed.isEmpty else { NSApp.terminate(nil); return }
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 650), styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         window.title = "Подключение к Chrome"
@@ -45,8 +60,50 @@ final class ChromeSetupDelegate: NSObject, NSApplicationDelegate, NSWindowDelega
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
+        if dialogMode { print("cancel"); fflush(stdout) }
         NSApp.terminate(nil)
         return true
+    }
+}
+
+struct InstallerDialogView: View {
+    let kind: String
+    let heading: String
+    let message: String
+    private func finish(_ result: String) {
+        print(result)
+        fflush(stdout)
+        NSApp.terminate(nil)
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 12) {
+                Image(systemName: kind == "error" ? "exclamationmark.triangle.fill" : (kind == "done" ? "checkmark.circle.fill" : "rectangle.stack.fill"))
+                    .font(.system(size: 19, weight: .semibold)).foregroundStyle(accent)
+                    .frame(width: 44, height: 44).background(accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 13))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("TAB SWITCHER").font(.system(size: 10, weight: .bold)).tracking(1.4).foregroundStyle(accent)
+                    Text(heading).font(.system(size: 20, weight: .bold)).foregroundStyle(.white)
+                }
+            }
+            ScrollView { Text(message).font(.system(size: 13)).foregroundStyle(.white.opacity(0.72)).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled) }
+            Spacer(minLength: 0)
+            HStack {
+                Spacer()
+                if kind == "start" {
+                    Button("Отмена") { finish("cancel") }.buttonStyle(.plain).foregroundStyle(.white.opacity(0.7)).padding(.horizontal, 14)
+                }
+                Button(kind == "start" ? "Установить" : "Готово") { finish("ok") }
+                    .buttonStyle(.plain).font(.system(size: 13, weight: .semibold))
+                    .padding(.horizontal, 18).padding(.vertical, 10)
+                    .background(accent, in: RoundedRectangle(cornerRadius: 11)).foregroundStyle(Color.black.opacity(0.85))
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(.horizontal, 28).padding(.top, 42).padding(.bottom, 26)
+        .frame(width: 480, height: 300)
+        .background(LinearGradient(colors: [Color(red: 0.10, green: 0.11, blue: 0.17), Color(red: 0.055, green: 0.06, blue: 0.09)], startPoint: .topLeading, endPoint: .bottomTrailing))
+        .preferredColorScheme(.dark)
     }
 }
 

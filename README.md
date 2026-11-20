@@ -7,6 +7,7 @@
 ## Features
 
 - **Visual tab previews** — See thumbnails, favicons, and titles as you cycle through tabs
+- **Custom tab names** — In Chrome 150 or later, right-click a web tab in the tab strip and select **Rename tab…**. The name appears in Chrome and in the switcher, survives a reload of the same page, and is cleared when the tab changes URL or Chrome restarts. Open the same menu and choose **Restore original** in the editor to remove the custom name.
 - **Most recently used order** — Tabs ordered by recency, not position. One Ctrl+Tab instantly jumps to your last tab
 - **Copy URL shortcut** — Press Cmd+Shift+C to copy the current tab's URL to your clipboard with a confirmation toast
 - **Customizable shortcuts** — Remap both the tab switcher and copy URL shortcuts to any key combination
@@ -70,7 +71,7 @@ All shortcuts can be customized in the app's setup window.
 
 ## Privacy
 
-Tab Switcher operates entirely locally. No data is collected, stored, or transmitted. See our [Privacy Policy](https://tabswitcher.app/privacy).
+Custom tab names are kept locally in Chrome for the current browser session. See our [Privacy Policy](https://tabswitcher.app/privacy).
 
 ## Building from Source
 

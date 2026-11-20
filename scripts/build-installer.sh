@@ -8,7 +8,8 @@ trap 'rm -rf "$stage"' EXIT
 bundle="$stage/Tab Switcher Personal"
 mkdir -p "$bundle/Extension" "$(dirname "$out")"
 TAB_SWITCHER_UNIVERSAL=1 TAB_SWITCHER_OUTPUT="$bundle/Tab Switcher Personal.app" "$root/scripts/build-personal.sh"
-for f in manifest.json mainsw.js popup.html popup.js icon16.png icon32.png icon48.png icon128.png; do cp "$root/$f" "$bundle/Extension/$f"; done
+for f in manifest.json mainsw.js popup.html popup.js tab-renaming.js rename-tab.html rename-tab.js icon16.png icon32.png icon48.png icon128.png; do cp "$root/$f" "$bundle/Extension/$f"; done
+cp -R "$root/_locales" "$bundle/Extension/"
 /usr/bin/plutil -insert key -string "$(cat "$root/packaging/extension-public-key.txt")" "$bundle/Extension/manifest.json"
 /usr/bin/plutil -replace name -string 'Tab Switcher Personal' "$bundle/Extension/manifest.json"
 python3 - "$bundle/Extension/mainsw.js" <<'PY'

@@ -2,8 +2,10 @@ on run
 	set bundleFolder to (POSIX path of (path to me)) & "Contents/Resources/Package/"
 	set supportFolder to (POSIX path of (path to library folder from user domain)) & "Application Support/Tab Switcher Personal/Extension"
 	set appPath to (POSIX path of (path to applications folder from user domain)) & "Tab Switcher Personal.app"
+	set dialogTool to quoted form of (bundleFolder & "Chrome Setup.app/Contents/MacOS/ChromeSetup")
 	try
-		display dialog "Установим Tab Switcher Personal для Chrome. Программа и связь с расширением настроятся автоматически. Затем нужно разрешить доступ macOS и один раз выбрать папку расширения в Chrome." buttons {"Отмена", "Установить"} default button "Установить" with title "Установка Tab Switcher"
+		set answer to do shell script dialogTool & " --dialog start " & quoted form of "Установка Tab Switcher" & " " & quoted form of "Установим программу и подготовим расширение для Chrome. Затем разрешите доступ macOS и один раз выберите папку расширения в Chrome."
+		if answer is not "ok" then error number -128
 		set resultText to do shell script quoted form of (bundleFolder & "install.sh")
 		if resultText is not "OK" then error resultText
 		set readyFile to (POSIX path of (path to library folder from user domain)) & "Application Support/TabSwitcher/accessibility.ready"
@@ -35,8 +37,8 @@ on run
 		end repeat
 		do shell script "/usr/bin/touch " & quoted form of completionFile
 		if not extensionConnected then error "Расширение не подключилось. Убедитесь, что оно загружено и включено в Chrome, затем откройте установщик ещё раз."
-		display dialog "Chrome запустил программу-помощник. Теперь проверьте в Chrome: удерживайте Control и нажимайте Tab. Если карусель не появилась, проверьте разрешение macOS и перезагрузите расширение." buttons {"Готово"} default button "Готово" with title "Установка завершена"
+		do shell script dialogTool & " --dialog done " & quoted form of "Установка завершена" & " " & quoted form of "Расширение подключено. В Chrome удерживайте Control и нажимайте Tab, чтобы переключаться между вкладками."
 	on error errMsg number errNum
-		if errNum is not -128 then display alert "Не удалось завершить установку" message errMsg as warning
+		if errNum is not -128 then do shell script dialogTool & " --dialog error " & quoted form of "Не удалось завершить установку" & " " & quoted form of errMsg
 	end try
 end run

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Rename tab</title>
+  <style>
+    :root { color-scheme: light dark; font: 14px system-ui, sans-serif; }
+    body { margin: 0; padding: 20px; }
+    label, input { display: block; }
+    label { font-weight: 600; }
+    input {
+      box-sizing: border-box;
+      width: 100%;
+      margin-top: 8px;
+      padding: 8px;
+      border: 1px solid GrayText;
+      border-radius: 6px;
+      font: inherit;
+    }
+    footer { display: flex; justify-content: space-between; gap: 8px; margin-top: 16px; }
+    button { padding: 6px 12px; border-radius: 6px; font: inherit; cursor: pointer; }
+    button[type="submit"] { background: Highlight; color: HighlightText; border: 1px solid transparent; }
+    button:disabled { opacity: .5; cursor: default; }
+    p { margin: 10px 0 0; }
+  </style>
+</head>
+<body>
+  <form>
+    <label for="tab-name" data-message="tabName">Tab name</label>
+    <input id="tab-name" type="text" maxlength="200" disabled>
+    <footer>
+      <button id="reset" type="button" data-message="resetTabName" disabled>Restore original</button>
+      <button id="save" type="submit" data-message="saveTabName" disabled>Save</button>
+    </footer>
+    <p id="error" role="alert" hidden></p>
+  </form>
+  <script src="rename-tab.js"></script>
+</body>
+</html>

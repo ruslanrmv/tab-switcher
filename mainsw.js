@@ -3,6 +3,8 @@
  * Provides macOS-style Cmd+Tab switching for Chrome tabs
  */
 
+importScripts("tab-renaming.js");
+
 // Version checking
 var EXTENSION_VERSION = chrome.runtime.getManifest().version;
 var VERSION_CHECK_URL = "https://tabswitcher.app/version.json";
@@ -34,6 +36,14 @@ var nativeHostConnected = false;
 // Thumbnail caching for visual tab switcher
 var tabThumbnails = {}; // Map of tabId -> base64 thumbnail data
 var tabThumbnailOrder = []; // Track order for LRU eviction
+var thumbnailCacheReady = chrome.storage.session.get('tabSwitcherThumbnails').then(({tabSwitcherThumbnails}) => {
+	if (tabSwitcherThumbnails) {
+		tabThumbnails = tabSwitcherThumbnails.images || {};
+		tabThumbnailOrder = tabSwitcherThumbnails.order || [];
+	}
+}).catch(() => {});
+var captureTimers = new Map();
+var lastCaptureAt = 0;
 var MAX_THUMBNAILS = 20; // Limit memory usage - keep only 20 most recent thumbnails
 var lastActiveTabId = null; // Track the last active tab for thumbnail capture
 
@@ -289,20 +299,16 @@ chrome.tabs.onActivated.addListener(function(activeInfo){
 			putExistingTabToTop(activeInfo.tabId);	
 		}
 		
-		// Capture thumbnail of the tab we just switched TO (after a brief delay for render)
-		setTimeout(function() {
-			captureThumbnail(activeInfo.tabId, activeInfo.windowId);
-		}, 300);
 	}
+	// Capture even when activation was caused by the native switcher.
+	scheduleThumbnail(activeInfo.tabId, activeInfo.windowId);
 });
 
 // Update thumbnail when page finishes loading
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 	if (changeInfo.status === 'complete' && tab.active) {
 		// Page finished loading, capture a fresh thumbnail after a short delay
-		setTimeout(function() {
-			captureThumbnail(tabId, tab.windowId);
-		}, 500);
+		scheduleThumbnail(tabId, tab.windowId);
 	}
 });
 
@@ -398,56 +404,39 @@ var printMRUSimple = function() {
 // Thumbnail Capture for Visual Tab Switcher
 // ============================================
 
-var captureThumbnail = function(tabId, windowId) {
-	// First check if the tab still exists and is in a valid state
-	chrome.tabs.get(tabId, function(tab) {
-		if (chrome.runtime.lastError || !tab) {
-			log("Cannot capture thumbnail - tab doesn't exist: " + tabId);
-			return;
-		}
-		
-		// Skip chrome:// and other restricted URLs
-		if (tab.url && (tab.url.startsWith('chrome://') || 
-		                tab.url.startsWith('chrome-extension://') ||
-		                tab.url.startsWith('devtools://') ||
-		                tab.url.startsWith('edge://') ||
-		                tab.url.startsWith('about:'))) {
-			log("Skipping thumbnail capture for restricted URL: " + tab.url);
-			return;
-		}
+function scheduleThumbnail(tabId, windowId) {
+	clearTimeout(captureTimers.get(windowId));
+	captureTimers.set(windowId, setTimeout(() => {
+		captureTimers.delete(windowId);
+		captureThumbnail(tabId, windowId);
+	}, Math.max(600, 600 - (Date.now() - lastCaptureAt))));
+}
 
-		// Capture the visible tab as a low-quality JPEG
-		chrome.tabs.captureVisibleTab(windowId, {
-			format: 'jpeg',
-			quality: 40  // Lower quality for smaller size and memory
-		}, function(dataUrl) {
-			if (chrome.runtime.lastError) {
-				log("Failed to capture thumbnail: " + chrome.runtime.lastError.message);
-				return;
-			}
-			if (dataUrl) {
-				// Update LRU order
-				var existingIndex = tabThumbnailOrder.indexOf(tabId);
-				if (existingIndex !== -1) {
-					tabThumbnailOrder.splice(existingIndex, 1);
-				}
-				tabThumbnailOrder.unshift(tabId); // Add to front (most recent)
-				
-				// Store thumbnail
-				tabThumbnails[tabId] = dataUrl;
-				
-				// Evict old thumbnails if over limit
-				while (tabThumbnailOrder.length > MAX_THUMBNAILS) {
-					var oldestTabId = tabThumbnailOrder.pop();
-					delete tabThumbnails[oldestTabId];
-					log("Evicted old thumbnail for tab " + oldestTabId);
-				}
-				
-				log("Captured thumbnail for tab " + tabId + " (total: " + tabThumbnailOrder.length + ")");
-			}
-		});
-	});
-};
+async function captureThumbnail(tabId, windowId) {
+	try {
+		await thumbnailCacheReady;
+		const tab = await chrome.tabs.get(tabId);
+		if (!tab.active || !/^https?:|^file:/.test(tab.url || '')) return;
+		lastCaptureAt = Date.now();
+		const dataUrl = await chrome.tabs.captureVisibleTab(windowId, {format: 'jpeg', quality: 45});
+		// The active tab may have changed while captureVisibleTab was pending.
+		const current = await chrome.tabs.get(tabId);
+		if (!current.active || current.url !== tab.url) return;
+		const image = await createImageBitmap(await (await fetch(dataUrl)).blob());
+		const width = Math.min(image.width, 480);
+		const canvas = new OffscreenCanvas(width, Math.max(1, Math.round(image.height * width / image.width)));
+		canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+		image.close();
+		const blob = await canvas.convertToBlob({type: 'image/jpeg', quality: 0.55});
+		const bytes = new Uint8Array(await blob.arrayBuffer());
+		let encoded = '';
+		for (let offset = 0; offset < bytes.length; offset += 8192) encoded += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
+		tabThumbnails[tabId] = 'data:image/jpeg;base64,' + btoa(encoded);
+		tabThumbnailOrder = [tabId, ...tabThumbnailOrder.filter(id => id !== tabId)].slice(0, MAX_THUMBNAILS);
+		for (const id of Object.keys(tabThumbnails)) if (!tabThumbnailOrder.includes(Number(id))) delete tabThumbnails[id];
+		await chrome.storage.session.set({tabSwitcherThumbnails: {images: tabThumbnails, order: tabThumbnailOrder}});
+	} catch (error) { log('Thumbnail capture failed: ' + error.message); }
+}
 
 // Capture thumbnail of the current active tab (for initial capture)
 var captureCurrentTabThumbnail = function() {
@@ -463,6 +452,7 @@ var captureCurrentTabThumbnail = function() {
 // Get tab data for the visual switcher (includes thumbnails, titles, favicons)
 // Uses filteredMru when in a native switch session, otherwise uses full mru
 var getTabDataForSwitcher = async function() {
+	await thumbnailCacheReady;
 	// Use filtered MRU during native switch, otherwise full MRU
 	var mruToUse = nativeSwitchOngoing ? filteredMru : mru;
 	var tabs = await chrome.tabs.query({});
