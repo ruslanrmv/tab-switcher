@@ -30,6 +30,26 @@ mkdir -p "$payload"
 mv "$bundle/Tab Switcher Personal.app" "$payload/"
 mv "$bundle/Extension" "$payload/"
 cp "$root/packaging/install.sh" "$payload/install.sh"
+helper="$payload/Chrome Setup.app/Contents"
+mkdir -p "$helper/MacOS"
+for arch in arm64 x86_64; do
+    swiftc -O -target "$arch-apple-macos14.0" "$root/packaging/ChromeSetup.swift" -o "$helper/MacOS/ChromeSetup.$arch"
+done
+lipo -create "$helper/MacOS/ChromeSetup.arm64" "$helper/MacOS/ChromeSetup.x86_64" -output "$helper/MacOS/ChromeSetup"
+rm "$helper/MacOS/ChromeSetup.arm64" "$helper/MacOS/ChromeSetup.x86_64"
+cat > "$helper/Info.plist" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>com.ruslanrmv.tabswitcher.chrome-setup</string>
+<key>CFBundleName</key><string>Tab Switcher — установка</string>
+<key>CFBundleExecutable</key><string>ChromeSetup</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleVersion</key><string>1</string>
+<key>LSMinimumSystemVersion</key><string>14.0</string>
+<key>NSHighResolutionCapable</key><true/>
+</dict></plist>
+PLIST
 codesign --force --deep --sign - "$bundle/Установить Tab Switcher.app"
 codesign --verify --deep --strict "$bundle/Установить Tab Switcher.app"
 cp "$root/packaging/README.txt" "$bundle/Прочти меня.txt"

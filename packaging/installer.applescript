@@ -20,9 +20,9 @@ on run
 			end try
 		end repeat
 		if not accessGranted then error "Доступ macOS не получен. Включите Tab Switcher Personal в настройках «Управление устройством и доступ к данным» и запустите установщик снова."
-		set the clipboard to supportFolder
-		display dialog "Остался последний шаг. В Chrome включите «Режим разработчика» и нажмите «Загрузить распакованное расширение». В окне выбора нажмите ⌘⇧G, вставьте скопированный путь сочетанием ⌘V и нажмите Return, затем «Выбрать». Путь уже скопирован. После выбора папки установщик продолжит автоматически." buttons {"Отмена", "Открыть Chrome"} default button "Открыть Chrome" with title "Подключение расширения"
-		do shell script "/usr/bin/open -a 'Google Chrome' 'chrome://extensions/'"
+		set completionFile to (POSIX path of (path to library folder from user domain)) & "Application Support/TabSwitcher/chrome-setup.complete"
+		do shell script "/bin/rm -f " & quoted form of completionFile
+		do shell script "/usr/bin/open -n " & quoted form of (bundleFolder & "Chrome Setup.app") & " --args " & quoted form of supportFolder & " " & quoted form of completionFile
 		set extensionConnected to false
 		repeat 300 times
 			try
@@ -33,6 +33,7 @@ on run
 				delay 1
 			end try
 		end repeat
+		do shell script "/usr/bin/touch " & quoted form of completionFile
 		if not extensionConnected then error "Расширение не подключилось. Убедитесь, что оно загружено и включено в Chrome, затем откройте установщик ещё раз."
 		display dialog "Chrome запустил программу-помощник. Теперь проверьте в Chrome: удерживайте Control и нажимайте Tab. Если карусель не появилась, проверьте разрешение macOS и перезагрузите расширение." buttons {"Готово"} default button "Готово" with title "Установка завершена"
 	on error errMsg number errNum
