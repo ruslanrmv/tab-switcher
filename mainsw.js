@@ -463,29 +463,20 @@ var captureCurrentTabThumbnail = function() {
 // Get tab data for the visual switcher (includes thumbnails, titles, favicons)
 // Uses filteredMru when in a native switch session, otherwise uses full mru
 var getTabDataForSwitcher = async function() {
-	var tabData = [];
 	// Use filtered MRU during native switch, otherwise full MRU
 	var mruToUse = nativeSwitchOngoing ? filteredMru : mru;
-	
-	for (var i = 0; i < mruToUse.length; i++) {
-		var tabId = mruToUse[i];
-		try {
-			var tab = await chrome.tabs.get(tabId);
-			if (tab) {
-				tabData.push({
-					id: tab.id,
-					title: tab.title || 'Untitled',
-					favIconUrl: tab.favIconUrl || '',
-					thumbnail: tabThumbnails[tabId] || null,
-					url: tab.url || ''
-				});
-			}
-		} catch (e) {
-			log("Error getting tab data for tab " + tabId + ": " + e.message);
-		}
-	}
-	
-	return tabData;
+	var tabs = await chrome.tabs.query({});
+	var byId = new Map(tabs.map(tab => [tab.id, tab]));
+	return mruToUse.flatMap(function(tabId) {
+		var tab = byId.get(tabId);
+		return tab ? [{
+			id: tab.id,
+			title: tab.title || 'Untitled',
+			favIconUrl: tab.favIconUrl || '',
+			thumbnail: tabThumbnails[tabId] || null,
+			url: tab.url || ''
+		}] : [];
+	});
 };
 
 // ============================================
@@ -527,6 +518,14 @@ var detectBrowserBundleId = function() {
 var browserBundleId = detectBrowserBundleId();
 log("Detected browser: " + browserBundleId);
 
+// Preserve key-event order while the browser resolves tab queries asynchronously.
+var nativeActionQueue = Promise.resolve();
+function queueNativeAction(action) {
+	nativeActionQueue = nativeActionQueue.then(action).catch(function(error) {
+		log("Native switch action failed: " + error.message);
+	});
+}
+
 var connectNativeHost = function() {
 	if (nativePort) {
 		log("Native host already connected");
@@ -562,13 +561,13 @@ var connectNativeHost = function() {
 					pingTimeout = null;
 				}
 			} else if (message.action === "cycle_next") {
-				handleNativeCycle(1, message.show_ui, message.current_window_only);
+				queueNativeAction(() => handleNativeCycle(1, message.show_ui, message.current_window_only));
 			} else if (message.action === "cycle_prev") {
-				handleNativeCycle(-1, message.show_ui, message.current_window_only);
+				queueNativeAction(() => handleNativeCycle(-1, message.show_ui, message.current_window_only));
 			} else if (message.action === "request_show_ui") {
-				handleRequestShowUI(message.current_window_only);
+				queueNativeAction(() => handleRequestShowUI(message.current_window_only));
 			} else if (message.action === "end_switch") {
-				handleNativeEndSwitch();
+				queueNativeAction(() => handleNativeEndSwitch());
 			} else if (message.action === "copy_url") {
 				handleCopyUrl();
 			} else if (message.action === "error_no_accessibility") {
@@ -629,17 +628,9 @@ var getFilteredMru = async function() {
 		var currentWindowId = currentWindow.id;
 		
 		// Filter MRU to only include tabs from current window
-		var filtered = [];
-		for (var i = 0; i < mru.length; i++) {
-			try {
-				var tab = await chrome.tabs.get(mru[i]);
-				if (tab && tab.windowId === currentWindowId) {
-					filtered.push(mru[i]);
-				}
-			} catch (e) {
-				// Tab may have been closed
-			}
-		}
+		var tabs = await chrome.tabs.query({windowId: currentWindowId});
+		var ids = new Set(tabs.map(tab => tab.id));
+		var filtered = mru.filter(id => ids.has(id));
 		return filtered.length > 0 ? filtered : mru; // Fallback to all tabs if window has only 1 tab
 	} catch (e) {
 		log("Error filtering MRU by window: " + e.message);

@@ -21,17 +21,19 @@ on run
 		end repeat
 		if not accessGranted then error "Доступ macOS не получен. Включите Tab Switcher Personal в настройках «Управление устройством и доступ к данным» и запустите установщик снова."
 		set the clipboard to supportFolder
+		display dialog "Остался последний шаг. В Chrome включите «Режим разработчика» и нажмите «Загрузить распакованное расширение». В окне выбора нажмите ⌘⇧G, вставьте скопированный путь сочетанием ⌘V и нажмите Return, затем «Выбрать». Путь уже скопирован. После выбора папки установщик продолжит автоматически." buttons {"Отмена", "Открыть Chrome"} default button "Открыть Chrome" with title "Подключение расширения"
 		do shell script "/usr/bin/open -a 'Google Chrome' 'chrome://extensions/'"
-		display dialog "Шаг 2 из 2: в Chrome включите «Режим разработчика» и нажмите «Загрузить распакованное расширение». В окне выбора нажмите ⌘⇧G, вставьте скопированный путь сочетанием ⌘V и нажмите Return, затем «Выбрать». Путь уже скопирован. Вернитесь сюда после загрузки." buttons {"Отмена", "Готово"} default button "Готово" with title "Подключение расширения"
-		repeat
+		set extensionConnected to false
+		repeat 300 times
 			try
 				do shell script "/bin/ps -axo command | /usr/bin/grep -F " & quoted form of (appPath & "/Contents/MacOS/tab-switcher") & " | /usr/bin/grep -F 'chrome-extension://ljjhnekahaikbjndkiihdpapdoafbfof/' | /usr/bin/grep -v grep >/dev/null"
+				set extensionConnected to true
 				exit repeat
 			on error
-				set choice to button returned of (display dialog "Программа ещё не подключилась. Проверьте, что в Chrome выбрана нужная папка Extension и расширение включено, затем повторите проверку." buttons {"Закрыть", "Проверить снова"} default button "Проверить снова" with title "Проверяем подключение")
-				if choice is "Закрыть" then return
+				delay 1
 			end try
 		end repeat
+		if not extensionConnected then error "Расширение не подключилось. Убедитесь, что оно загружено и включено в Chrome, затем откройте установщик ещё раз."
 		display dialog "Chrome запустил программу-помощник. Теперь проверьте в Chrome: удерживайте Control и нажимайте Tab. Если карусель не появилась, проверьте разрешение macOS и перезагрузите расширение." buttons {"Готово"} default button "Готово" with title "Установка завершена"
 	on error errMsg number errNum
 		if errNum is not -128 then display alert "Не удалось завершить установку" message errMsg as warning
