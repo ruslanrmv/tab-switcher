@@ -6,9 +6,26 @@ extension="$HOME/Library/Application Support/Tab Switcher Personal/Extension"
 config="$HOME/Library/Application Support/TabSwitcher/browser_config.json"
 host="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.tabswitcher.native.json"
 id="ljjhnekahaikbjndkiihdpapdoafbfof"
-fail() { printf '\n%s\nНажмите Return, чтобы закрыть окно.\n' "$1"; read -r; exit 1; }
+fail() { printf "%s\n" "$1" >&2; exit 1; }
 [ -d 'Tab Switcher Personal.app' ] && [ -f 'Extension/manifest.json' ] || fail 'Комплект неполный: распакуйте архив целиком.'
-[ ! -e "$app" ] && [ ! -e "$extension" ] && [ ! -e "$config" ] && [ ! -e "$host" ] || fail 'Найдена существующая установка Tab Switcher. Для её сохранности автоматическая установка остановлена.'
+if [ -e "$app" ] || [ -e "$extension" ] || [ -e "$config" ] || [ -e "$host" ]; then
+    if [ -f "$config" ] && [ -f "$host" ] && cmp -s "$app/Contents/MacOS/tab-switcher" 'Tab Switcher Personal.app/Contents/MacOS/tab-switcher' && diff -qr "$extension" Extension >/dev/null 2>&1; then
+        export TABSWITCHER_INSTALL_APP="$app" TABSWITCHER_INSTALL_ID="$id" TABSWITCHER_INSTALL_CONFIG="$config" TABSWITCHER_INSTALL_HOST="$host"
+        check=$(osascript -l JavaScript <<'JXA'
+ObjC.import('Foundation');
+const env=$.NSProcessInfo.processInfo.environment;
+function read(k){return JSON.parse(ObjC.unwrap($.NSString.stringWithContentsOfFileEncodingError(env.objectForKey(k),$.NSUTF8StringEncoding,null)))}
+const c=read('TABSWITCHER_INSTALL_CONFIG'), h=read('TABSWITCHER_INSTALL_HOST');
+const id=ObjC.unwrap(env.objectForKey('TABSWITCHER_INSTALL_ID')), app=ObjC.unwrap(env.objectForKey('TABSWITCHER_INSTALL_APP'));
+JSON.stringify(c.some(x=>x.id==='com.google.Chrome' && x.isEnabled && x.extensionId===id) && h.path===app+'/Contents/MacOS/tab-switcher' && h.allowed_origins.includes('chrome-extension://'+id+'/'));
+JXA
+        )
+        [ "$check" = true ] || fail 'Найдена другая конфигурация Tab Switcher. Установщик не меняет её автоматически.'
+        printf 'OK\n'
+        exit 0
+    fi
+    fail 'Найдена существующая или неполная установка Tab Switcher. Установщик не заменяет её автоматически, чтобы сохранить ваши настройки.'
+fi
 [ -d '/Applications/Google Chrome.app' ] || [ -d "$HOME/Applications/Google Chrome.app" ] || fail 'Сначала установите Google Chrome.'
 mkdir -p "$(dirname "$app")" "$(dirname "$extension")" "$(dirname "$config")" "$(dirname "$host")"
 ditto 'Tab Switcher Personal.app' "$app"
@@ -20,9 +37,4 @@ JXA
 osascript -l JavaScript <<'JXA' > "$host"
 JSON.stringify({name:'com.tabswitcher.native',description:'Tab Switcher Native Helper',path:$.NSProcessInfo.processInfo.environment.objectForKey('TABSWITCHER_INSTALL_APP').js+'/Contents/MacOS/tab-switcher',type:'stdio',allowed_origins:['chrome-extension://'+$.NSProcessInfo.processInfo.environment.objectForKey('TABSWITCHER_INSTALL_ID').js+'/']})
 JXA
-printf '\nУстановлено. Осталось один раз подключить расширение и разрешить доступ macOS.\n\n1. В Chrome включите режим разработчика и нажмите «Загрузить распакованное расширение».\n2. Выберите папку Extension в открывшемся Finder.\n3. Откройте Tab Switcher Personal и разрешите доступ в Универсальном доступе macOS.\n\nПапка расширения: %s\n' "$extension"
-open "$extension"
-open -a 'Google Chrome' 'chrome://extensions/'
-open "$app"
-printf '\nНажмите Return, чтобы закрыть окно.\n'
-read -r
+printf "OK\n"
