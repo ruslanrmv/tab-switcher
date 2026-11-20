@@ -1553,14 +1553,23 @@ struct TabSwitcherView: View {
                                 tab: tab,
                                 isSelected: index == state.selectedIndex
                             )
-                            .id(index)
+                            .id(tab.id)
                         }
                     }
                     .padding(padding)
                 }
+                .onAppear {
+                    // The first selection is assigned before this view exists, so
+                    // onChange alone cannot bring an initially offscreen tab into view.
+                    DispatchQueue.main.async {
+                        guard state.tabs.indices.contains(state.selectedIndex) else { return }
+                        proxy.scrollTo(state.tabs[state.selectedIndex].id, anchor: .center)
+                    }
+                }
                 .onChange(of: state.selectedIndex) {
+                    guard state.tabs.indices.contains(state.selectedIndex) else { return }
                     withAnimation(.easeOut(duration: 0.1)) {
-                        proxy.scrollTo(state.selectedIndex, anchor: .center)
+                        proxy.scrollTo(state.tabs[state.selectedIndex].id, anchor: .center)
                     }
                 }
             }
