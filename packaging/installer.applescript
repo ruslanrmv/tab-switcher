@@ -6,10 +6,12 @@ on run
 		display dialog "Установим Tab Switcher Personal для Chrome. Программа и связь с расширением настроятся автоматически. Затем нужно разрешить доступ macOS и один раз выбрать папку расширения в Chrome." buttons {"Отмена", "Установить"} default button "Установить" with title "Установка Tab Switcher"
 		set resultText to do shell script quoted form of (bundleFolder & "install.sh")
 		if resultText is not "OK" then error resultText
-		display dialog "Шаг 1 из 2: разрешите Tab Switcher Personal управлять компьютером. Это необходимо для Control + Tab. В открывшемся окне macOS включите разрешение, затем вернитесь сюда и нажмите «Продолжить»." buttons {"Отмена", "Открыть настройки"} default button "Открыть настройки" with title "Доступ к клавиатуре"
 		do shell script "/usr/bin/open " & quoted form of appPath
-		do shell script "/usr/bin/open 'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'"
-		display dialog "Включите доступ для Tab Switcher Personal в списке «Управление устройством и доступ к данным». Если macOS попросит Touch ID или пароль, подтвердите запрос там. Затем вернитесь сюда." buttons {"Отмена", "Продолжить"} default button "Продолжить" with title "Доступ macOS"
+		repeat
+			set permissionChoice to button returned of (display dialog "Шаг 1 из 2: macOS попросит разрешить Tab Switcher Personal управление компьютером для Control + Tab. В системном запросе откройте настройки и включите доступ. Затем вернитесь сюда и нажмите «Продолжить». Если запрос не появился, нажмите «Открыть настройки»." buttons {"Отмена", "Открыть настройки", "Продолжить"} default button "Продолжить" with title "Доступ macOS")
+			if permissionChoice is "Продолжить" then exit repeat
+			do shell script "/usr/bin/open 'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'"
+		end repeat
 		set the clipboard to supportFolder
 		do shell script "/usr/bin/open -a 'Google Chrome' 'chrome://extensions/'"
 		display dialog "Шаг 2 из 2: в Chrome включите «Режим разработчика» и нажмите «Загрузить распакованное расширение». В окне выбора нажмите ⌘⇧G, вставьте скопированный путь сочетанием ⌘V и нажмите Return, затем «Выбрать». Путь уже скопирован. Вернитесь сюда после загрузки." buttons {"Отмена", "Готово"} default button "Готово" with title "Подключение расширения"
