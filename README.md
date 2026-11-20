@@ -140,3 +140,7 @@ MIT License — see [LICENSE](LICENSE)
 The personal build fixes carousel scrolling and disables the original developer's app update feed. It uses an ad-hoc signature; macOS Accessibility permission may need to be granted again after rebuilding. The Chrome Web Store extension remains the native messaging client.
 
 Run `scripts/build-personal.sh` on macOS with Xcode command-line tools. By default it uses the installed `/Applications/Tab Switcher Personal.app` as a template for Sparkle and the icon and writes a separate bundle under `dist/`. To bootstrap from the original app, set `TAB_SWITCHER_TEMPLATE='/Applications/Tab Switcher.app'`. Set `TAB_SWITCHER_OUTPUT` to choose a fresh output path; the script refuses to overwrite an existing bundle. Install and grant Accessibility permission to the resulting app, then point the browser's native messaging manifest at its executable. Do not use the original app's update feed for this fork.
+
+## Publishing this checkout
+
+The local `publish` remote is configured with push URLs for the GitHub fork and the private Forgejo repository. After committing, run `git push publish HEAD` to publish the current branch to both. Git contacts the two servers separately; check both results if either push fails. The repository-specific SSH configuration and deploy key stay outside the tracked source.
