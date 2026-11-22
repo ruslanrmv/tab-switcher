@@ -1,3 +1,19 @@
+/*
+ * The RotateCcw icon is from Lucide (ISC License).
+ * Copyright (c) 2026 Lucide Icons and Contributors
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
 (() => {
   const menuId = "rename-tab";
   const editorUrl = chrome.runtime.getURL("rename-tab.html");
@@ -57,8 +73,15 @@
     shadow.innerHTML = `<style>
       .box{width:min(340px, calc(100vw - 32px));box-sizing:border-box;padding:18px;background:#181927;color:#f7f7ff;border:1px solid #44465d;border-radius:14px;box-shadow:0 12px 44px #0009;font:13px -apple-system,BlinkMacSystemFont,sans-serif}
       label{font-weight:700;font-size:14px;display:block;margin-bottom:9px}input{box-sizing:border-box;width:100%;border:1px solid #55586f;border-radius:8px;background:#272938;color:white;padding:9px;font:inherit;outline:none}input:focus{border-color:#9996ff}
-      .actions{display:flex;align-items:center;gap:8px;margin-top:14px}.actions-spacer{flex:1;min-width:0}button{box-sizing:border-box;height:36px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;border:0;border-radius:9px;padding:0 13px;background:#333548;color:#f7f7ff;cursor:pointer;font:500 12px -apple-system,BlinkMacSystemFont,sans-serif}button:hover:not(:disabled){filter:brightness(1.12)}button:focus-visible{outline:2px solid #aaa6ff;outline-offset:2px}button[type=submit]{background:#9691ff;color:#161622;font-weight:700}button:disabled{opacity:.35;cursor:default}#reset{width:36px;min-width:36px;padding:0;background:#292b3c}#reset svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.error:not(:empty){color:#ffaaaa;margin-top:10px;line-height:1.35}
-    </style><form class="box"><label for="name"></label><input id="name" maxlength="200" autocomplete="off"><div class="actions"><button type="button" id="reset"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.4 5.7"/><path d="M4 5v6h6"/></svg></button><span class="actions-spacer"></span><button type="button" id="cancel"></button><button type="submit"></button></div><div class="error" role="alert"></div></form>`;
+      .actions{display:flex;align-items:center;gap:8px;margin-top:14px}.actions-spacer{flex:1;min-width:0}button{box-sizing:border-box;height:36px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;border:0;border-radius:9px;padding:0 13px;background:#333548;color:#f7f7ff;cursor:pointer;font:500 12px -apple-system,BlinkMacSystemFont,sans-serif}button:hover:not(:disabled){filter:brightness(1.12)}button:focus-visible{outline:2px solid #aaa6ff;outline-offset:2px}button[type=submit]{background:#9691ff;color:#161622;font-weight:700}button:disabled{opacity:.35;cursor:default}#reset{width:36px;min-width:36px;padding:0;background:#292b3c}.error:not(:empty){color:#ffaaaa;margin-top:10px;line-height:1.35}
+    </style><form class="box"><label for="name"></label><input id="name" maxlength="200" autocomplete="off"><div class="actions">
+      <button type="button" id="reset">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+        </svg>
+      </button>
+      <span class="actions-spacer"></span><button type="button" id="cancel"></button><button type="submit"></button></div><div class="error" role="alert"></div></form>`;
     document.documentElement.appendChild(host);
     const input=shadow.querySelector('input'), form=shadow.querySelector('form');
     shadow.querySelector('label').textContent=chrome.i18n.getMessage('tabName');
