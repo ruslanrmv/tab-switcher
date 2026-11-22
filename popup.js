@@ -40,3 +40,11 @@ chrome.storage.local.get("shortcuts", function(data) {
     }
   }
 });
+
+chrome.commands.getAll().then(commands => {
+  const rename = commands.find(command => command.name === "rename_current_tab");
+  if (!rename?.shortcut) return;
+
+  document.getElementById("rename-tab-keys").textContent = rename.shortcut;
+  document.getElementById("rename-tab-shortcut").hidden = false;
+}).catch(error => console.warn("Could not read the rename tab shortcut:", error.message));

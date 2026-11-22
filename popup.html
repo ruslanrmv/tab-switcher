@@ -17,6 +17,7 @@
   .section-title { margin: 0 0 8px 2px; font-size: 10px; letter-spacing: .1em; color: #9293a5; font-weight: 700; }
   .shortcuts { border: 1px solid #2c2e3d; border-radius: 13px; background: #191b27; padding: 2px 12px; }
   .shortcut { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 13px 0; }
+  .shortcut[hidden] { display: none; }
   .shortcut + .shortcut { border-top: 1px solid #2b2d3a; }
   .shortcut-label { font-size: 12px; color: #e3e3ed; }
   .keys { display: flex; align-items: center; gap: 4px; }
@@ -32,6 +33,10 @@
   <div class="shortcuts">
     <div class="shortcut"><span class="shortcut-label">Переключить вкладку</span><span class="keys" id="tab-switch-keys"><span class="key">⌃ Ctrl</span><span class="key-plus">+</span><span class="key">Tab</span></span></div>
     <div class="shortcut"><span class="shortcut-label">Скопировать ссылку</span><span class="keys" id="copy-url-keys"><span class="key">⇧⌘C</span></span></div>
+    <div class="shortcut" id="rename-tab-shortcut" hidden>
+      <span class="shortcut-label">Переименовать вкладку</span>
+      <span class="keys"><span class="key" id="rename-tab-keys"></span></span>
+    </div>
   </div>
   <div class="version-label" id="version-label"></div>
   <script src="popup.js"></script>
